@@ -61,13 +61,25 @@ for i in range(len(sentences)):
             else:
                 distribution[4] += 1
 
+            tmp[1] = str(tmp[1])
+
             if int(splits[i][1]) == 1:
-                train_data.append(tmp)
+                train_data.append('\t'.join(tmp))
             elif int(splits[i][1]) == 2:
-                test_data.append(tmp)
+                test_data.append('\t'.join(tmp))
             else:
-                dev_data.append(tmp)
+                dev_data.append('\t'.join(tmp))
         else:
             print('loss sentence %d %s' % (i, tmp[0]))
 
-print(distribution)
+train_file = open(r'../datasets/stanfordSentimentTreebank/train.tsv', 'w')
+test_file = open(r'../datasets/stanfordSentimentTreebank/test.tsv', 'w')
+dev_file = open(r'../datasets/stanfordSentimentTreebank/dev.tsv', 'w')
+
+train_file.write('\n'.join(train_data))
+test_file.write('\n'.join(test_data))
+dev_file.write('\n'.join(dev_data))
+
+train_file.close()
+test_file.close()
+dev_file.close()
