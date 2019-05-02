@@ -1,1 +1,4 @@
 **/.idea/
+*.DS_Store
+py_dependency/cased_L-12_H-768_A-12
+
