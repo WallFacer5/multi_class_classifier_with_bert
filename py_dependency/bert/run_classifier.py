@@ -408,7 +408,8 @@ class SstProcessor(DataProcessor):
                 label = "0"
             else:
                 text_a = tokenization.convert_to_unicode(line[0])
-                this_label = int(float(line[1]) * 5)
+                # this_label = int(float(line[1]) * 5)
+                this_label = int(line[1])
                 if this_label > 4:
                     this_label = 4
                 label = tokenization.convert_to_unicode(str(this_label))
@@ -856,6 +857,46 @@ def handle_confused_matrix(result, filename):
     data_df.to_csv(output_cm_file, index=True, header=True, sep=',')
 
 
+def handle_test_confused_matrix(compare, filename):
+    output_cm_file = os.path.join(FLAGS.output_dir, filename)
+    labels = SstProcessor().get_labels()
+    result = []
+    for i in range(len(labels)):
+        result.append([])
+        for j in range(len(labels)):
+            result[i].append(0)
+    for i in range(len(compare)):
+        result[compare[i][1]][compare[i][0]] += 1
+
+    data_df = pd.DataFrame(result)
+    data_df.columns = labels
+    data_df.index = labels
+    precision = []
+    recall = []
+    all_precision = 0
+    for i in range(len(list(data_df.columns))):
+        predict_sum = sum(data_df.values[:, i])
+        actual_sum = sum(data_df.values[i, :])
+        # 计算召回率
+        if actual_sum == 0:
+            recall.append(0)
+        else:
+            recall_value = data_df.values[i][i] / actual_sum
+            recall.append(recall_value)
+        # 计算准确率
+        if predict_sum == 0:
+            precision.append(0)
+        else:
+            precision_value = data_df.values[i][i] / predict_sum
+            precision.append(precision_value)
+        all_precision += data_df.values[i][i]
+    tf.logging.info('all classify right data count: {}'.format(all_precision))
+    data_df.loc['准确率'] = precision
+    recall.append("")
+    data_df['召回率'] = recall
+    data_df.to_csv(output_cm_file, index=True, header=True, sep=',')
+
+
 def main(_):
     tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -1047,6 +1088,27 @@ def main(_):
                     for class_probability in probabilities) + "\n"
                 writer.write(output_line)
                 num_written_lines += 1
+        output_compare_file = os.path.join(FLAGS.output_dir, "test_compare.tsv")
+        with open(output_compare_file, 'w') as compare_f:
+            with open(output_predict_file, 'r') as reader1:
+                with open(os.path.join(FLAGS.data_dir, "test.tsv"), 'r') as reader2:
+                    out_list = []
+                    compare_f.write('\t'.join(('predict', 'right')) + '\n')
+                    for line in reader1:
+                        line = line.strip('\n')
+                        line = line.split('\t')
+                        line = list(map(lambda s: float(s), line))
+                        pred_cate = line.index(max(line))
+                        out_list.append([str(pred_cate)])
+                    i = 0
+                    for line in reader2:
+                        line = line.strip('\n')
+                        line = line.split('\t')[1]
+                        out_list[i].append(line)
+                        i += 1
+                    compare_f.write('\n'.join(list(map(lambda l: '\t'.join(l), out_list))))
+                    out_list = list(map(lambda l: [int(l[0]), int(l[1])], out_list))
+                    handle_test_confused_matrix(out_list, 'test_confused_matrix.csv')
         assert num_written_lines == num_actual_predict_examples
 
 
