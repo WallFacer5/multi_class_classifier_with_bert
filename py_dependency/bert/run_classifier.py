@@ -377,7 +377,7 @@ class ColaProcessor(DataProcessor):
 
 
 class SstProcessor(DataProcessor):
-    """Processor for the CoLA data set (GLUE version)."""
+    """Processor for the SST data set (GLUE version)."""
 
     def get_train_examples(self, data_dir):
         """See base class."""
@@ -413,6 +413,53 @@ class SstProcessor(DataProcessor):
                 if this_label > 4:
                     this_label = 4
                 label = tokenization.convert_to_unicode(str(this_label))
+            examples.append(
+                InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+        return examples
+
+
+class SstTreeProcessor(DataProcessor):
+    """Processor for the SST data set (Using tree) (GLUE version)."""
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+
+    def get_test_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
+
+    def get_labels(self):
+        """See base class."""
+        data_dir = FLAGS.data_dir
+        splits = data_dir.split('/')[-1]
+        splits = splits.split('_')
+
+        return splits
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            guid = "%s-%s" % (set_type, i)
+            if set_type == "test":
+                text_a = tokenization.convert_to_unicode(line[0])
+                label = self.get_labels()[0]
+            else:
+                text_a = tokenization.convert_to_unicode(line[0])
+                # this_label = int(float(line[1]) * 5)
+                # this_label = int(line[1])
+                # if this_label > 4:
+                #     this_label = 4
+                # label = tokenization.convert_to_unicode(str(this_label))
+                label = tokenization.convert_to_unicode(line[1])
             examples.append(
                 InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
         return examples
@@ -826,11 +873,11 @@ def convert_examples_to_features(examples, label_list, max_seq_length,
     return features
 
 
-def handle_confused_matrix(result, filename):
+def handle_confused_matrix(result, filename, processor):
     output_cm_file = os.path.join(FLAGS.output_dir, filename)
     data_df = pd.DataFrame(result['eval_cm'])
-    data_df.columns = SstProcessor().get_labels()
-    data_df.index = SstProcessor().get_labels()
+    data_df.columns = processor.get_labels()
+    data_df.index = processor.get_labels()
     precision = []
     recall = []
     all_precision = 0
@@ -857,16 +904,18 @@ def handle_confused_matrix(result, filename):
     data_df.to_csv(output_cm_file, index=True, header=True, sep=',')
 
 
-def handle_test_confused_matrix(compare, filename):
+def handle_test_confused_matrix(compare, filename, processor):
     output_cm_file = os.path.join(FLAGS.output_dir, filename)
-    labels = SstProcessor().get_labels()
+    labels = processor.get_labels()
     result = []
     for i in range(len(labels)):
         result.append([])
         for j in range(len(labels)):
             result[i].append(0)
     for i in range(len(compare)):
-        result[compare[i][1]][compare[i][0]] += 1
+        index0 = labels.index(compare[i][0])
+        index1 = labels.index(compare[i][1])
+        result[index1][index0] += 1
 
     data_df = pd.DataFrame(result)
     data_df.columns = labels
@@ -905,7 +954,8 @@ def main(_):
         "mnli": MnliProcessor,
         "mrpc": MrpcProcessor,
         "xnli": XnliProcessor,
-        "sst": SstProcessor
+        "sst": SstProcessor,
+        "ssttree":SstTreeProcessor
     }
 
     tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
@@ -1042,7 +1092,7 @@ def main(_):
             for key in sorted(result.keys()):
                 tf.logging.info("  %s = %s", key, str(result[key]))
                 writer.write("%s = %s\n" % (key, str(result[key])))
-        handle_confused_matrix(result, 'eval_confused_matrix.csv')
+        handle_confused_matrix(result, 'eval_confused_matrix.csv', processor)
 
     if FLAGS.do_predict:
         predict_examples = processor.get_test_examples(FLAGS.data_dir)
@@ -1098,17 +1148,17 @@ def main(_):
                         line = line.strip('\n')
                         line = line.split('\t')
                         line = list(map(lambda s: float(s), line))
-                        pred_cate = line.index(max(line))
-                        out_list.append([str(pred_cate)])
+                        pred_cate = processor.get_labels()[line.index(max(line))]
+                        out_list.append([pred_cate])
                     i = 0
                     for line in reader2:
                         line = line.strip('\n')
                         line = line.split('\t')[1]
+
                         out_list[i].append(line)
                         i += 1
                     compare_f.write('\n'.join(list(map(lambda l: '\t'.join(l), out_list))))
-                    out_list = list(map(lambda l: [int(l[0]), int(l[1])], out_list))
-                    handle_test_confused_matrix(out_list, 'test_confused_matrix.csv')
+                    handle_test_confused_matrix(out_list, 'test_confused_matrix.csv', processor)
         assert num_written_lines == num_actual_predict_examples
 
 
