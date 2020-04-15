@@ -12,9 +12,9 @@ from core.multi_classify_tree import MultiClassifyTree
 from core.bert_tree import BertTree
 
 
-def run_classifier(backend, data_dir, output_dir, cates=5):
+def run_classifier(backend, data_dir, output_dir, rebalance, cates=5):
     if backend.lower().split('_')[0]=='bert':
-        model = BertTree(data_dir, output_dir, cates)
+        model = BertTree(data_dir, output_dir, rebalance, cates)
         case = backend.lower().split('_')[1]
         model.case_setter(case)
         model.test()
@@ -26,5 +26,6 @@ if __name__ == '__main__':
     parser.add_argument('-d', dest='data_dir', help='data directory', type=str, required=True)
     parser.add_argument('-o', dest='output_dir', help='output directory', type=str, required=True)
     parser.add_argument('-c', dest='cates', help='categories', type=int, required=True)
+    parser.add_argument('-r', dest='rebalance', help='do rebalance or not', type=bool, required=True)
     args = parser.parse_args()
-    run_classifier(args.backend, args.data_dir, args.output_dir, args.cates)
+    run_classifier(args.backend, args.data_dir, args.output_dir, args.rebalance, args.cates)

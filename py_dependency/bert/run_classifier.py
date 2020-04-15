@@ -101,6 +101,8 @@ flags.DEFINE_integer("iterations_per_loop", 1000,
 
 flags.DEFINE_bool("use_tpu", False, "Whether to use TPU or GPU/CPU.")
 
+flags.DEFINE_integer("sst_cates", 5, "sst category num.")
+
 tf.flags.DEFINE_string(
     "tpu_name", None,
     "The Cloud TPU to use for training. This should be either the name "
@@ -396,7 +398,9 @@ class SstProcessor(DataProcessor):
 
     def get_labels(self):
         """See base class."""
-        return ["0", "1", "2", "3", "4"]
+        cates = FLAGS.sst_cates
+        # return ["0", "1", "2", "3", "4"]
+        return list(map(lambda i: str(i), list(range(cates))))
 
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
@@ -410,8 +414,8 @@ class SstProcessor(DataProcessor):
                 text_a = tokenization.convert_to_unicode(line[0])
                 # this_label = int(float(line[1]) * 5)
                 this_label = int(line[1])
-                if this_label > 4:
-                    this_label = 4
+                # if this_label > 4:
+                    # this_label = 4
                 label = tokenization.convert_to_unicode(str(this_label))
             examples.append(
                 InputExample(guid=guid, text_a=text_a, text_b=None, label=label))

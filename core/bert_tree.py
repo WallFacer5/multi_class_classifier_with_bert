@@ -30,10 +30,10 @@ class BertTree(MultiClassifyTree):
 export BERT_BASE_DIR=/home/zyh/projects/multi_class_classifier_with_bert/py_dependency/{case}cased_L-12_H-768_A-12
 export GLUE_DIR=/home/zyh/projects/multi_class_classifier_with_bert/{classifier}
 
-CUDA_VISIBLE_DEVICES=0 python {run_path} \\
+python {run_path} \\
   --task_name=SSTtree \\
-  --do_train=false \\
-  --do_eval=false \\
+  --do_train=true \\
+  --do_eval=true \\
   --do_predict=true \\
   --data_dir=$GLUE_DIR \\
   --vocab_file=$BERT_BASE_DIR/vocab.txt \\
@@ -61,6 +61,7 @@ CUDA_VISIBLE_DEVICES=0 python {run_path} \\
     def test(self):
         self.generate_classifiers()
         self.run_classification()
+        self.merge_results()
 
 
 if __name__ == '__main__':

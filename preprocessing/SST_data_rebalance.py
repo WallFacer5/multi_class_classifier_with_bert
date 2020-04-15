@@ -20,7 +20,11 @@ def trans_data(cates):
     write_data = []
     for line in train_f:
         line = line.strip('\n').split('\t')
-        label = int(float(line[1]) * cates)
+        label1 = float(line[1]) * cates
+        if label1 == int(label1):
+            label = int(float(line[1]) * cates) - 1
+        else:
+            label = int(float(line[1]) * cates)
         if label >= cates:
             label = cates - 1
         line[1] = str(label)
