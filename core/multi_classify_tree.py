@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import random
 import numpy as np
+from core.eda import eda
 
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(ROOT_PATH, '../'))
@@ -13,12 +14,13 @@ sys.path.append(ROOT_PATH)
 
 class MultiClassifyTree(object):
 
-    def __init__(self, data_dir, output_dir, rebalance, cates=5):
+    def __init__(self, data_dir, output_dir, rebalance, eda=False, cates=5):
         self.classifiers = []
         self.cates = cates
         self.data_dir = data_dir
         self.output_dir = output_dir
         self.rebalance = rebalance
+        self.eda=eda
 
         self.train_path = os.path.join(data_dir, 'train.tsv')
         self.dev_path = os.path.join(data_dir, 'dev.tsv')
@@ -157,6 +159,16 @@ class MultiClassifyTree(object):
             sample_num -= len(l)
         return ret_l + random.sample(l, sample_num)
 
+    def eda_sample(self, l, sample_num):
+        ret_l = []
+        if sample_num >= len(l):
+            ret_l += l
+            for s in l:
+                ret_l += eda(s, 0.1, 0.0, 0.0, 0.0, sample_num // len(l) - 1)
+            sample_num %= len(l)
+        return ret_l + random.sample(list(map(lambda s: eda(s, 0.1, 0.0, 0.0, 0.0, 1)[0], l)), sample_num)
+
+
     def generate_single_classifier(self, split):
         single_path = '_'.join(list(map(lambda l: '-'.join([str(l[0]), str(l[-1])]), split)))
         data_dir = r'datasets/stanfordSentimentTreebank/sst_%s_tree' % (str(self.cates))
@@ -229,10 +241,12 @@ class MultiClassifyTree(object):
                 if rebalance_dict[keys]['len'] > max_len:
                     max_len = rebalance_dict[keys]['len']
 
+            r_method = self.eda_sample if self.eda else self.multi_sample
+
             for keys in rebalance_dict:
                 data2write += list(
                     map(lambda s: '\t'.join([s, keys]),
-                        self.multi_sample(rebalance_dict[keys]['data'], max_len - rebalance_dict[keys]['len'])))
+                        r_method(rebalance_dict[keys]['data'], max_len - rebalance_dict[keys]['len'])))
             random.shuffle(data2write)
 
             train_writer.write('\n'.join(data2write))
