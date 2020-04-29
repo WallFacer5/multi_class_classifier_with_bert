@@ -27,8 +27,8 @@ class BertTree(MultiClassifyTree):
             do_lower = 'True'
         run_sh = '''#!/usr/bin/env bash
 
-export BERT_BASE_DIR=/home/zyh/projects/multi_class_classifier_with_bert/py_dependency/{case}cased_L-12_H-768_A-12
-export GLUE_DIR=/home/zyh/projects/multi_class_classifier_with_bert/{classifier}
+export BERT_BASE_DIR=~/multi_class_classifier_with_bert/py_dependency/{case}cased_L-12_H-768_A-12
+export GLUE_DIR=~/multi_class_classifier_with_bert/{classifier}
 
 python {run_path} \\
   --task_name=SSTtree \\

@@ -888,13 +888,13 @@ def handle_confused_matrix(result, filename, processor):
     for i in range(len(list(data_df.columns))):
         predict_sum = sum(data_df.values[:, i])
         actual_sum = sum(data_df.values[i, :])
-        # 计算召回率
+        # calculate recall
         if actual_sum == 0:
             recall.append(0)
         else:
             recall_value = data_df.values[i][i] / actual_sum
             recall.append(recall_value)
-        # 计算准确率
+        # calculate precision
         if predict_sum == 0:
             precision.append(0)
         else:
@@ -902,9 +902,9 @@ def handle_confused_matrix(result, filename, processor):
             precision.append(precision_value)
         all_precision += data_df.values[i][i]
     tf.logging.info('all classify right data count: {}'.format(all_precision))
-    data_df.loc['准确率'] = precision
+    data_df.loc['precision'] = precision
     recall.append("")
-    data_df['召回率'] = recall
+    data_df['recall'] = recall
     data_df.to_csv(output_cm_file, index=True, header=True, sep=',')
 
 
@@ -930,13 +930,13 @@ def handle_test_confused_matrix(compare, filename, processor):
     for i in range(len(list(data_df.columns))):
         predict_sum = sum(data_df.values[:, i])
         actual_sum = sum(data_df.values[i, :])
-        # 计算召回率
+        # calculate recall
         if actual_sum == 0:
             recall.append(0)
         else:
             recall_value = data_df.values[i][i] / actual_sum
             recall.append(recall_value)
-        # 计算准确率
+        # calculate precision
         if predict_sum == 0:
             precision.append(0)
         else:
@@ -944,9 +944,9 @@ def handle_test_confused_matrix(compare, filename, processor):
             precision.append(precision_value)
         all_precision += data_df.values[i][i]
     tf.logging.info('all classify right data count: {}'.format(all_precision))
-    data_df.loc['准确率'] = precision
+    data_df.loc['precision'] = precision
     recall.append("")
-    data_df['召回率'] = recall
+    data_df['recall'] = recall
     data_df.to_csv(output_cm_file, index=True, header=True, sep=',')
 
 

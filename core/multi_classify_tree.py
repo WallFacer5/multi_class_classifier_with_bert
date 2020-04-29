@@ -4,6 +4,7 @@ import sys
 import os
 import pandas as pd
 import random
+import numpy as np
 
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(ROOT_PATH, '../'))
@@ -273,10 +274,14 @@ class MultiClassifyTree(object):
 
     def merge_results(self):
         results = []
+        result_distributions = []
         total = 0
         right = 0
         for i in range(len(self.test_label)):
             results.append([])
+            result_distributions.append([])
+            for j in range(self.cates):
+                result_distributions[i].append(1.0)
         for classifier in self.classifiers:
             with open(os.path.join(self.output_dir, classifier.split('/')[-1], 'test_compare.tsv'),
                       'r') as result_reader:
@@ -286,16 +291,39 @@ class MultiClassifyTree(object):
                         line = line.strip('\n').split('\t')
                         results[i].append(line[0])
                     i += 1
-        self.confused_matrix = []
+            with open(os.path.join(self.output_dir, classifier.split('/')[-1], 'test_results.tsv'),
+                      'r') as prob_reader:
+                for i, line in enumerate(prob_reader):
+                    line = line.strip('\n').split('\t')
+                    p_l = classifier.split('/')[-1].split('_')
+                    for j, fields in enumerate(p_l):
+                        fields = fields.split('-')
+                        for num in range(int(fields[0]), int(fields[1]) + 1):
+                            result_distributions[i][num] *= float(line[j])
+        result_distributions = list(np.array(result_distributions).argmax(axis=1).reshape([-1]))
+        new_results = open(os.path.join(self.output_dir, 'new_results.tsv'), 'w')
+        new_results.write('\t'.join(['Pred', 'Ground']) + '\n')
+
+        self.confused_matrix = [[0 for i in range(self.cates)] for j in range(self.cates)]
+
         result_writer = open(os.path.join(self.output_dir, 'test_result.tsv'), 'w')
 
+        for i in range(len(self.test_label)):
+            new_results.write('\t'.join([str(result_distributions[i]), str(self.test_label[i])]) + '\n')
+            result_writer.write('\t'.join([self.test_s[i], str(result_distributions[i])]) + '\n')
+            self.confused_matrix[int(self.test_label[i])][result_distributions[i]] += 1
+            if int(self.test_label[i]) == result_distributions[i]:
+                right += 1
+            total += 1
+
+        new_results.close()
+        '''
         for i in range(self.cates):
             self.confused_matrix.append([])
             for j in range(self.cates):
                 self.confused_matrix[i].append(0)
         for i in range(len(self.test_label)):
             cur_result = []
-            print(results[i])
             for j in range(len(results[i])):
                 interval = list(map(lambda s: int(s), results[i][j].split('-')))
                 if not cur_result:
@@ -315,8 +343,9 @@ class MultiClassifyTree(object):
                 right += 1
             total += 1
 
-            self.confused_matrix[index0][index1] += 1
-        result_writer.write('\n'.join(results))
+            self.confused_matrix[index0][index1] += 1'''
+
+        # result_writer.write('\n'.join(results))
         result_writer.close()
 
         with open(os.path.join(self.output_dir, 'test_accuracy.txt'), 'w') as acc_writer:
@@ -335,13 +364,13 @@ class MultiClassifyTree(object):
         for i in range(len(list(data_df.columns))):
             predict_sum = sum(data_df.values[:, i])
             actual_sum = sum(data_df.values[i, :])
-            # 计算召回率
+            # calculate recall
             if actual_sum == 0:
                 recall.append(0)
             else:
                 recall_value = data_df.values[i][i] / actual_sum
                 recall.append(recall_value)
-            # 计算准确率
+            # calculate precision
             if predict_sum == 0:
                 precision.append(0)
             else:
@@ -349,9 +378,9 @@ class MultiClassifyTree(object):
                 precision.append(precision_value)
             all_precision += data_df.values[i][i]
         # tf.logging.info('all classify right data count: {}'.format(all_precision))
-        data_df.loc['准确率'] = precision
+        data_df.loc['precision'] = precision
         recall.append("")
-        data_df['召回率'] = recall
+        data_df['recall'] = recall
 
         output_cm_file = os.path.join(self.output_dir, 'test_confused_matrix.csv')
         data_df.to_csv(output_cm_file, index=True, header=True, sep=',')
