@@ -62,6 +62,7 @@ python {run_path} \\
         self.generate_classifiers()
         self.run_classification()
         self.merge_results()
+        self.merge_results_old()
 
 
 if __name__ == '__main__':

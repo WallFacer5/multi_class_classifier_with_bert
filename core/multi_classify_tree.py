@@ -160,11 +160,11 @@ class MultiClassifyTree(object):
         return ret_l + random.sample(l, sample_num)
 
     def eda_sample(self, l, sample_num):
+        print(sample_num)
         ret_l = []
         if sample_num >= len(l):
-            ret_l += l
             for s in l:
-                ret_l += eda(s, 0.1, 0.0, 0.0, 0.0, sample_num // len(l) - 1)
+                ret_l += eda(s, 0.1, 0.0, 0.0, 0.0, sample_num // len(l))
             sample_num %= len(l)
         return ret_l + random.sample(list(map(lambda s: eda(s, 0.1, 0.0, 0.0, 0.0, 1)[0], l)), sample_num)
 
@@ -331,35 +331,7 @@ class MultiClassifyTree(object):
             total += 1
 
         new_results.close()
-        '''
-        for i in range(self.cates):
-            self.confused_matrix.append([])
-            for j in range(self.cates):
-                self.confused_matrix[i].append(0)
-        for i in range(len(self.test_label)):
-            cur_result = []
-            for j in range(len(results[i])):
-                interval = list(map(lambda s: int(s), results[i][j].split('-')))
-                if not cur_result:
-                    cur_result = interval
-                else:
-                    if interval[0] >= cur_result[0] and interval[1] <= cur_result[1]:
-                        cur_result = interval
-            if cur_result[0] != cur_result[1]:
-                print('interval wrong!')
-            cur_result = cur_result[0]
-            results[i] = '\t'.join([self.test_s[i], str(cur_result)])
 
-            index0 = self.test_label[i]
-            index1 = cur_result
-
-            if index0 == index1:
-                right += 1
-            total += 1
-
-            self.confused_matrix[index0][index1] += 1'''
-
-        # result_writer.write('\n'.join(results))
         result_writer.close()
 
         with open(os.path.join(self.output_dir, 'test_accuracy.txt'), 'w') as acc_writer:
@@ -385,6 +357,122 @@ class MultiClassifyTree(object):
                 recall_value = data_df.values[i][i] / actual_sum
                 recall.append(recall_value)
             # calculate precision
+            if predict_sum == 0:
+                precision.append(0)
+            else:
+                precision_value = data_df.values[i][i] / predict_sum
+                precision.append(precision_value)
+            all_precision += data_df.values[i][i]
+        # tf.logging.info('all classify right data count: {}'.format(all_precision))
+        data_df.loc['precision'] = precision
+        recall.append("")
+        data_df['recall'] = recall
+
+        output_cm_file = os.path.join(self.output_dir, 'test_confused_matrix.csv')
+        data_df.to_csv(output_cm_file, index=True, header=True, sep=',')
+
+        # old
+        '''
+                for i in range(self.cates):
+                    self.confused_matrix.append([])
+                    for j in range(self.cates):
+                        self.confused_matrix[i].append(0)
+                for i in range(len(self.test_label)):
+                    cur_result = []
+                    for j in range(len(results[i])):
+                        interval = list(map(lambda s: int(s), results[i][j].split('-')))
+                        if not cur_result:
+                            cur_result = interval
+                        else:
+                            if interval[0] >= cur_result[0] and interval[1] <= cur_result[1]:
+                                cur_result = interval
+                    if cur_result[0] != cur_result[1]:
+                        print('interval wrong!')
+                    cur_result = cur_result[0]
+                    results[i] = '\t'.join([self.test_s[i], str(cur_result)])
+
+                    index0 = self.test_label[i]
+                    index1 = cur_result
+
+                    if index0 == index1:
+                        right += 1
+                    total += 1
+
+                    self.confused_matrix[index0][index1] += 1'''
+
+        # result_writer.write('\n'.join(results))
+
+    def merge_results_old(self):
+        results = []
+        total = 0
+        right = 0
+        for i in range(len(self.test_label)):
+            results.append([])
+        for classifier in self.classifiers:
+            with open(os.path.join(self.output_dir, classifier.split('/')[-1], 'test_compare.tsv'),
+                      'r') as result_reader:
+                i = -1
+                for line in result_reader:
+                    if i >= 0:
+                        line = line.strip('\n').split('\t')
+                        results[i].append(line[0])
+                    i += 1
+        self.confused_matrix = []
+        result_writer = open(os.path.join(self.output_dir, 'test_result_old.tsv'), 'w')
+
+        for i in range(self.cates):
+            self.confused_matrix.append([])
+            for j in range(self.cates):
+                self.confused_matrix[i].append(0)
+        for i in range(len(self.test_label)):
+            cur_result = []
+            # print(results[i])
+            for j in range(len(results[i])):
+                interval = list(map(lambda s: int(s), results[i][j].split('-')))
+                if not cur_result:
+                    cur_result = interval
+                else:
+                    if interval[0] >= cur_result[0] and interval[1] <= cur_result[1]:
+                        cur_result = interval
+            if cur_result[0] != cur_result[1]:
+                print('interval wrong!')
+            cur_result = cur_result[0]
+            results[i] = '\t'.join([self.test_s[i], str(cur_result)])
+
+            index0 = self.test_label[i]
+            index1 = cur_result
+
+            if index0 == index1:
+                right += 1
+            total += 1
+
+            self.confused_matrix[index0][index1] += 1
+        result_writer.write('\n'.join(results))
+        result_writer.close()
+
+        with open(os.path.join(self.output_dir, 'test_accuracy_old.txt'), 'w') as acc_writer:
+            acc = right / total
+            acc_writer.write(
+                '\n'.join(list(map(lambda l: '\t'.join(list(map(lambda s: str(s), l))), self.confused_matrix))))
+            acc_writer.write('\n')
+            acc_writer.write('Accuracy: ' + str(acc))
+
+        data_df = pd.DataFrame(self.confused_matrix)
+        data_df.columns = list(range(self.cates))
+        data_df.index = list(range(self.cates))
+        precision = []
+        recall = []
+        all_precision = 0
+        for i in range(len(list(data_df.columns))):
+            predict_sum = sum(data_df.values[:, i])
+            actual_sum = sum(data_df.values[i, :])
+            # compute recall
+            if actual_sum == 0:
+                recall.append(0)
+            else:
+                recall_value = data_df.values[i][i] / actual_sum
+                recall.append(recall_value)
+            # compute precision
             if predict_sum == 0:
                 precision.append(0)
             else:
