@@ -275,13 +275,16 @@ class MultiClassifyTree(object):
         while len(pool) < self.cates:
             next_pool = []
             for sub_pool in pool:
-                split_result = self.split(sub_pool)
-                print(split_result)
-                if self.rebalance:
-                    self.generate_single_classifier_rb(split_result)
+                if len(sub_pool) > 1:
+                    split_result = self.split(sub_pool)
+                    print(split_result)
+                    if self.rebalance:
+                        self.generate_single_classifier_rb(split_result)
+                    else:
+                        self.generate_single_classifier(split_result)
+                    next_pool += split_result
                 else:
-                    self.generate_single_classifier(split_result)
-                next_pool += split_result
+                    next_pool.append(sub_pool)
             pool = next_pool
             print(pool)
         print(self.classifiers)
