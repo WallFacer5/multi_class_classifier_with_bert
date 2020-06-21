@@ -16,7 +16,9 @@ def run_classifier(backend, data_dir, output_dir, rebalance, eda, cates=5):
     if backend.lower().split('_')[0]=='bert':
         model = BertTree(data_dir, output_dir, rebalance, eda, cates)
         case = backend.lower().split('_')[1]
+        size = backend.lower().split('_')[2]
         model.case_setter(case)
+        model.size_setter(size)
         model.test()
 
 

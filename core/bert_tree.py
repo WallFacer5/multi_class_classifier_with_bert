@@ -14,6 +14,9 @@ class BertTree(MultiClassifyTree):
     def case_setter(self, case):
         self.case = case
 
+    def size_setter(self, size):
+        self.size = size
+
     def generate_run_bash(self, classifier):
         print('generating bash', classifier)
         bash_path = os.path.join(classifier, 'run.sh')
@@ -25,9 +28,13 @@ class BertTree(MultiClassifyTree):
         else:
             case = 'un'
             do_lower = 'True'
+        if self.size == 'large':
+            bert_name = 'wwm_{case}cased_L-24_H-1024_A-16' % case
+        else:
+            bert_name = '{case}cased_L-12_H-768_A-12' % case
         run_sh = '''#!/usr/bin/env bash
 
-export BERT_BASE_DIR=~/multi_class_classifier_with_bert/py_dependency/{case}cased_L-12_H-768_A-12
+export BERT_BASE_DIR=~/multi_class_classifier_with_bert/py_dependency/{bert_name}
 export GLUE_DIR=~/multi_class_classifier_with_bert/{classifier}
 
 python {run_path} \\
@@ -40,12 +47,13 @@ python {run_path} \\
   --bert_config_file=$BERT_BASE_DIR/bert_config.json \\
   --init_checkpoint=$BERT_BASE_DIR/bert_model.ckpt \\
   --do_lower_case={do_lower} \\
-  --max_seq_length=128 \\
-  --train_batch_size=32 \\
+  --max_seq_length=64 \\
+  --train_batch_size=64 \\
   --learning_rate=1e-5 \\
-  --num_train_epochs=10.0 \\
+  --num_train_epochs=20.0 \\
+  --save_checkpoints_steps=10000\\
   --output_dir={out_dir}
-        '''.format(classifier=classifier, run_path=run_path, out_dir=out_dir, case=case, do_lower=do_lower)
+        '''.format(classifier=classifier, run_path=run_path, out_dir=out_dir, bert_name=bert_name, do_lower=do_lower)
 
         with open(bash_path, 'w') as bash_writer:
             bash_writer.write(run_sh)
