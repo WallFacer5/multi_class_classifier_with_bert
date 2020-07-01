@@ -29,9 +29,9 @@ class BertTree(MultiClassifyTree):
             case = 'un'
             do_lower = 'True'
         if self.size == 'large':
-            bert_name = 'wwm_{case}cased_L-24_H-1024_A-16' % case
+            bert_name = 'wwm_{case}cased_L-24_H-1024_A-16'.format(case=case)
         else:
-            bert_name = '{case}cased_L-12_H-768_A-12' % case
+            bert_name = '{case}cased_L-12_H-768_A-12'.format(case=case)
         run_sh = '''#!/usr/bin/env bash
 
 export BERT_BASE_DIR=~/multi_class_classifier_with_bert/py_dependency/{bert_name}
